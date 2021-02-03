@@ -23,20 +23,20 @@ Param(
 #region: Script Configuration
     $ErrorActionPreference = "Stop"
 
-    $DownloadFolder = New-Item -Path $DownloadPath -ItemType Directory -Force 
+    $downloadFolder = New-Item -Path $DownloadPath -ItemType Directory -Force
 
-    $LogPath = "$DownloadFolder\_Log.log"
-    if($LogPath){ # Logs will be saved to disk at the specified location
+    $logPath = "$downloadFolder\_Log.log"
+    if($logPath){ # Logs will be saved to disk at the specified location
         $ScriptMode=$true
     }
     else{ # Logs will not be saved to disk
         $ScriptMode = $false
     }
     $LogLevel = 0
-    $Trace    = ""   
+    $Trace    = ""
 #endregion: Script Configuration
 
-#region: Logging Functions 
+#region: Logging Functions
     #This writes the actual output - used by other functions
     function WriteLine ([string]$line,[string]$ForegroundColor, [switch]$NoNewLine){
         if($Script:ScriptMode){
@@ -46,7 +46,7 @@ Param(
             else {
                 $Script:Trace += "$line`r`n"
             }
-            Set-Content -Path $script:LogPath -Value $Script:Trace
+            Set-Content -Path $script:logPath -Value $Script:Trace
         }
         if($Script:HostMode){
             $Params = @{
@@ -56,25 +56,25 @@ Param(
             Write-Host $line @Params
         }
     }
-    
+
     #This handles informational logs
     function WriteInfo([string]$message,[switch]$WaitForResult,[string[]]$AdditionalStringArray,[string]$AdditionalMultilineString){
         if($WaitForResult){
             WriteLine "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)$message" -NoNewline
         }
         else{
-            WriteLine "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)$message"  
+            WriteLine "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)$message"
         }
         if($AdditionalStringArray){
             foreach ($String in $AdditionalStringArray){
-                WriteLine "                    $("`t" * $script:LogLevel)`t$String"     
-            }       
+                WriteLine "                    $("`t" * $script:LogLevel)`t$String"
+            }
         }
         if($AdditionalMultilineString){
             foreach ($String in ($AdditionalMultilineString -split "`r`n" | Where-Object {$_ -ne ""})){
-                WriteLine "                    $("`t" * $script:LogLevel)`t$String"     
+                WriteLine "                    $("`t" * $script:LogLevel)`t$String"
             }
-       
+
         }
     }
 
@@ -91,11 +91,11 @@ Param(
             if($message){
                 WriteLine "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)`t$message" -ForegroundColor Green
             }
-        } 
+        }
     }
 
     #This write highlighted info
-    function WriteInfoHighlighted([string]$message,[string[]]$AdditionalStringArray,[string]$AdditionalMultilineString){ 
+    function WriteInfoHighlighted([string]$message,[string[]]$AdditionalStringArray,[string]$AdditionalMultilineString){
         WriteLine "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)$message"  -ForegroundColor Cyan
         if($AdditionalStringArray){
             foreach ($String in $AdditionalStringArray){
@@ -110,7 +110,7 @@ Param(
     }
 
     #This write warning logs
-    function WriteWarning([string]$message,[string[]]$AdditionalStringArray,[string]$AdditionalMultilineString){ 
+    function WriteWarning([string]$message,[string[]]$AdditionalStringArray,[string]$AdditionalMultilineString){
         WriteLine "[$(Get-Date -Format hh:mm:ss)] WARNING: $("`t" * $script:LogLevel)$message"  -ForegroundColor Yellow
         if($AdditionalStringArray){
             foreach ($String in $AdditionalStringArray){
@@ -128,7 +128,7 @@ Param(
     function WriteError([string]$message){
         WriteLine ""
         WriteLine "[$(Get-Date -Format hh:mm:ss)] ERROR:   $("`t`t" * $script:LogLevel)$message" -ForegroundColor Red
-        
+
     }
 
     #This logs errors and terminated script
@@ -149,9 +149,9 @@ function GetLiveSysInternalsFileList ($URL,$SkipList) {
     WriteInfo "Going to $URL to get file list" -WaitForResult
         $LiveSysInternalsHTML = invoke-webrequest -Uri $URL -UseBasicParsing
         $Lines = $LiveSysInternalsHTML.RawContent -split "`n"
-        $lines = $Lines[9] -split "<br>"   
+        $lines = $Lines[9] -split "<br>"
     WriteResult -Success
-    
+
     WriteInfo "Converting list from HTML to PS Object"
     $script:LogLevel++
         foreach ($Line in $Lines){
@@ -174,7 +174,7 @@ function DownloadSysInternalsFile ($URL,$Destination){
     $Script:LogLevel++
     writeinfo "$URL => $Destination"
         try{
-            Invoke-WebRequest -Uri $URL -OutFile $Destination 
+            Invoke-WebRequest -Uri $URL -OutFile $Destination
         }
         catch{
             WriteError $error[0].Exception.Message
@@ -188,7 +188,7 @@ WriteInfo -message "ENTER: Get SysInternals Live Website"
 $LogLevel++
 
     $LiveVersionList = GetLiveSysInternalsFileList -URL $SysInternalsLiveURL -SkipList $SkipList
-    WriteInfo -message "Retrieved this list of files" -AdditionalMultilineString ($LiveVersionList |Sort-Object FileName |Out-string)    
+    WriteInfo -message "Retrieved this list of files" -AdditionalMultilineString ($LiveVersionList |Sort-Object FileName |Out-string)
 
 $LogLevel--
 WriteInfo -message "Exit: Get SysInternals Live Website"
@@ -199,7 +199,7 @@ WriteInfo -message "ENTER: Prepare download folder and import current version li
 $LogLevel++
 
     WriteInfo "Making sure $DownloadPath exists - will create one if needed" -WaitForResult
-        $DownloadFolder = New-Item -Path $DownloadPath -ItemType Directory -Force
+        $downloadFolder = New-Item -Path $DownloadPath -ItemType Directory -Force
     WriteResult -Success
 $LogLevel--
 WriteInfo -message "Exit: Prepare download folder and import current version list"
@@ -209,7 +209,7 @@ WriteInfo -message "Exit: Prepare download folder and import current version lis
 WriteInfo -message "ENTER: Check current version list"
 $LogLevel++
 
-    $CurrentVersionListPath =  "$DownloadFolder\_CurrentVersionList.csv"
+    $CurrentVersionListPath =  "$downloadFolder\_CurrentVersionList.csv"
     if(Test-Path -Path $CurrentVersionListPath){
         WriteInfo "File exists:$CurrentVersionListPath"
         $CurrentVersionList = Import-Csv -Path $CurrentVersionListPath
@@ -217,7 +217,7 @@ $LogLevel++
     }
     else{
         WriteInfo "File not found: $CurrentVersionListPath"
-    }    
+    }
 
 $LogLevel--
 WriteInfo -message "Exit: Check current version list"
@@ -227,17 +227,17 @@ WriteInfo -message "Exit: Check current version list"
 WriteInfo -message "ENTER: Download new files"
 $LogLevel++
 
-    if($CurrentVersionList -eq $null){
+    if($null -eq $CurrentVersionList){
         WriteInfo "Current Version List does not exist. Treating all files as new"
         WriteInfo "Downloading all files"
 
         foreach ($File in $LiveVersionList){
-            DownloadSysInternalsFile -URL $File.URL -Destination "$DownloadFolder\$($File.FileName)"
+            DownloadSysInternalsFile -URL $File.URL -Destination "$downloadFolder\$($File.FileName)"
         }
     }
     else{
         foreach($File in $LiveVersionList){
-            $PathOnDisk = "$DownloadFolder\$($File.FileName)"
+            $PathOnDisk = "$downloadFolder\$($File.FileName)"
             if((Test-Path -Path $PathOnDisk) -eq $false){ #File does not exist on disk => Download it
                 WriteInfo "$($File.FileName) does not exist"
                 DownloadSysInternalsFile -URL $File.URL -Destination $PathOnDisk
